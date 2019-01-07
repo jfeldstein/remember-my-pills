@@ -1,0 +1,26 @@
+{
+  "name": "remember-my-pills",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jfeldstein/remember-my-pills.git"
+  },
+  "author": "Jordan Feldstein <jfeldstein@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jfeldstein/remember-my-pills/issues"
+  },
+  "homepage": "https://github.com/jfeldstein/remember-my-pills#readme",
+  "dependencies": {
+    "ask-sdk-core": "^2.3.0",
+    "ask-sdk-dynamodb-persistence-adapter": "^2.3.0",
+    "ask-sdk-model": "^1.11.1",
+    "moment": "^2.23.0",
+    "moment-timezone": "^0.5.23"
+  }
+}

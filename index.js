@@ -3,37 +3,40 @@
 const Alexa = require('ask-sdk-core');
 const { DynamoDbPersistenceAdapter } = require('ask-sdk-dynamodb-persistence-adapter');
 const moment = require('moment');
-const request = require('request');
 
 const dynamoDbPersistenceAdapter = new DynamoDbPersistenceAdapter({ 
   tableName: 'taken_pills',
   partitionKeyName: 'UserId'
 });
 
-const getUser = async (userId) => {
-  let user;
-
-  const params = {
-    TableName: 'taken_pills',
-    Key: {
-      'UserId' : {"s": userId},
-    }
-  };
-
-  return await ddb.getItem(params).promise();
-};
+const LaunchHandler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    console.log(`CanHanle:: Type: ${request.type}, Name: ${request.intent && request.intent.name}`);
+    return request.type === 'LaunchRequest';
+  },
+  handle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    console.log(`handle:: Type: ${request.type}`);
+    return handlerInput.responseBuilder
+      .speak('Welcome to I Took My Pills! Just say, "Alexa, I took my pills," or "Alexa, have I taken my pills today?"');
+      .getResponse();
+  },
+}
 
 // core functionality for fact skill
 const RecallMyPillsHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
-    return request.type === 'LaunchRequest'
-      || (request.type === 'IntentRequest'
+    console.log(`CanHanle:: Type: ${request.type}, Name: ${request.intent && request.intent.name}`);
+    return (request.type === 'IntentRequest'
         && request.intent.name === 'RecallMyPillsIntent') 
       || (request.type === 'CanFulfillIntentRequest'
         && request.intent.name === 'RecallMyPillsIntent');
   },
   handle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    console.log(`handle:: Type: ${request.type}, Name: ${request.intent.name}`);
     if (handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest') {
       return handlerInput
         .responseBuilder
@@ -59,19 +62,22 @@ const RecallMyPillsHandler = {
 const RememberMyPillsHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
+    console.log(`CanHanle:: Type: ${request.type}, Name: ${request.intent && request.intent.name}`);
     return (request.type === 'IntentRequest'
         && request.intent.name === 'RememberMyPillsIntent') 
       || (request.type === 'CanFulfillIntentRequest'
         && request.intent.name === 'RememberMyPillsIntent');
   },
   handle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    console.log(`handle:: Type: ${request.type}, Name: ${request.intent.name}`);
     if (handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest') {
       return handlerInput
         .responseBuilder
         .withCanFulfillIntent({ "canFulfill": "YES" })
         .getResponse();
     }
-    
+
     handlerInput
       .attributesManager
       .setPersistentAttributes({
@@ -188,6 +194,7 @@ const skillBuilder = Alexa.SkillBuilders.custom();
 
 exports.handler = skillBuilder
   .addRequestHandlers(
+    LaunchHandler,
     RememberMyPillsHandler,
     RecallMyPillsHandler,
     HelpHandler,
