@@ -1,6 +1,25 @@
 /* eslint no-use-before-define: 0 */
 // sets up dependencies
 const Alexa = require('ask-sdk-core');
+const { DynamoDbPersistenceAdapter } = require('ask-sdk-dynamodb-persistence-adapter');
+
+const dynamoDbPersistenceAdapter = new DynamoDbPersistenceAdapter({ 
+  tableName: 'taken_pills',
+  partitionKeyName: 'UserId'
+});
+
+const getUser = async (userId) => {
+  let user;
+
+  const params = {
+    TableName: 'taken_pills',
+    Key: {
+      'UserId' : {"s": userId},
+    }
+  };
+
+  return await ddb.getItem(params).promise();
+};
 
 // core functionality for fact skill
 const RecallMyPillsHandler = {
@@ -12,11 +31,17 @@ const RecallMyPillsHandler = {
         && request.intent.name === 'RecallMyPillsIntent');
   },
   handle(handlerInput) {
-    const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
+    return handlerInput
+      .attributesManager
+      .getPersistentAttributes()
+      .then((attrs) => {
+        console.log(`Attributes: ${JSON.stringify(attrs)}`);
 
-    return handlerInput.responseBuilder
-      .speak("No")
-      .getResponse();
+        return handlerInput.responseBuilder
+          .speak("No")
+          .getResponse();
+      })
+      .catch(err => ErrorHandler.handle(handlerInput, err));
   },
 };
 
@@ -101,5 +126,6 @@ exports.handler = skillBuilder
     FallbackHandler,
     SessionEndedRequestHandler,
   )
+  .withPersistenceAdapter(dynamoDbPersistenceAdapter)
   .addErrorHandlers(ErrorHandler)
   .lambda();
