@@ -2,6 +2,8 @@
 // sets up dependencies
 const Alexa = require('ask-sdk-core');
 const { DynamoDbPersistenceAdapter } = require('ask-sdk-dynamodb-persistence-adapter');
+const moment = require('moment');
+const request = require('request');
 
 const dynamoDbPersistenceAdapter = new DynamoDbPersistenceAdapter({ 
   tableName: 'taken_pills',
@@ -25,23 +27,88 @@ const getUser = async (userId) => {
 const RecallMyPillsHandler = {
   canHandle(handlerInput) {
     const request = handlerInput.requestEnvelope.request;
-    // checks request type
     return request.type === 'LaunchRequest'
       || (request.type === 'IntentRequest'
+        && request.intent.name === 'RecallMyPillsIntent') 
+      || (request.type === 'CanFulfillIntentRequest'
         && request.intent.name === 'RecallMyPillsIntent');
   },
   handle(handlerInput) {
+    if (handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest') {
+      return handlerInput
+        .responseBuilder
+        .withCanFulfillIntent({ "canFulfill": "YES" })
+        .getResponse();
+    }
+
     return handlerInput
       .attributesManager
       .getPersistentAttributes()
       .then((attrs) => {
         console.log(`Attributes: ${JSON.stringify(attrs)}`);
 
+        let hasTakenPills = attrs.last_pills_at && moment(attrs.last_pills_at).add(18, 'hours').isAfter(moment());
+
         return handlerInput.responseBuilder
-          .speak("No")
+          .speak(hasTakenPills ? "Indeed, you have taken your pills today." : "You've not yet taken your pills.")
+          .getResponse();
+      });
+  },
+};
+
+const RememberMyPillsHandler = {
+  canHandle(handlerInput) {
+    const request = handlerInput.requestEnvelope.request;
+    return (request.type === 'IntentRequest'
+        && request.intent.name === 'RememberMyPillsIntent') 
+      || (request.type === 'CanFulfillIntentRequest'
+        && request.intent.name === 'RememberMyPillsIntent');
+  },
+  handle(handlerInput) {
+    if (handlerInput.requestEnvelope.request.type === 'CanFulfillIntentRequest') {
+      return handlerInput
+        .responseBuilder
+        .withCanFulfillIntent({ "canFulfill": "YES" })
+        .getResponse();
+    }
+    
+    handlerInput
+      .attributesManager
+      .setPersistentAttributes({
+        last_pills_at: moment().format()
+      });
+
+    return handlerInput
+      .attributesManager
+      .savePersistentAttributes()
+      .then(() => {
+        return handlerInput.responseBuilder
+          .speak("Got it!")
           .getResponse();
       })
-      .catch(err => ErrorHandler.handle(handlerInput, err));
+
+    // return handlerInput
+    //   .attributesManager
+    //   .getPersistentAttributes()
+    //   .then((attrs) => {
+    //     console.log(`Attributes: ${JSON.stringify(attrs)}`);
+
+        
+
+    //     const apiAccessToken = handlerInput.requestEnvelope.context.system.apiAccessToken;
+    //     const deviceId = handlerInput.requestEnvelope.context.system.device.deviceId;
+
+    //     return request.get(`https://api.amazonalexa.com/v2/devices/${deviceId}/settings/System.timeZone`, {
+    //       'auth': {
+    //         'bearer': apiAccessToken
+    //       }
+    //     }).then(timeZone => {
+    //       const now = moment().tz
+    //       return handlerInput.responseBuilder
+    //         .speak("No")
+    //         .getResponse()
+    //     });
+    //   })
   },
 };
 
@@ -58,6 +125,7 @@ const HelpHandler = {
       .getResponse();
   },
 };
+
 
 const FallbackHandler = {
   // 2018-Aug-01: AMAZON.FallbackIntent is only currently available in en-* locales.
@@ -120,6 +188,7 @@ const skillBuilder = Alexa.SkillBuilders.custom();
 
 exports.handler = skillBuilder
   .addRequestHandlers(
+    RememberMyPillsHandler,
     RecallMyPillsHandler,
     HelpHandler,
     ExitHandler,
